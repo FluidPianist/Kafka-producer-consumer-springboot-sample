@@ -25,7 +25,9 @@ public class PassPhraseSecurityFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
         logger.info("Executing Authentication");
         String username = httpServletRequest.getParameter("username");
-        Path passPath = Paths.get("secrets","pass");
+        String secretsPath = System.getenv("SecretsPath");
+        if(secretsPath == null) secretsPath="secrets";
+        Path passPath = Paths.get(secretsPath,"pass");
         String password = Files.readAllLines(passPath).get(0);
         logger.info("username : %s \n password : %s "+username+password);
         if(username.equals("adeeb") && password.equals("adeeb")){

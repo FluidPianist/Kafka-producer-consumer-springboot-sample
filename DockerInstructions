@@ -1,0 +1,96 @@
+building image from docker file :
+	go inside the folder where docker file is and run : docker build -t img_name:tag
+
+running an image by mapping port 8080 of the container to port 8080 of the local machine: 
+	docker run -p 8080:8080 img_name:tag 
+	//container name will be randomly assigned
+
+
+to go inside the container : docker exec -it <container_name>
+
+to see the live logs of the application running inside the container : docker logs -f <container-name or id>
+
+Make sure the context is correct run docker context ls and switch using : docker context use <context-name> ,
+Its better to use default context on linux, the images will not be shown in docker-desktop however.
+
+Network is important for containers to communicate with each other:
+
+Network creation is handled automatically by docker-compose:
+refer to in future for docker-container
+
+version: '3'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest 
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_SERVER_ID: 1
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+
+  broker:
+    image: confluentinc/cp-kafka:latest
+    container_name: broker
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:9092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  spring-app:
+    build:
+      context: .
+      dockerfile: Dockerfile //create a corresponding Dockerfile in the same directory as dockercompose for projects you are working on 
+    image: firstapp:v1
+    ports:
+      - "8080:8080"
+    depends_on:
+      - broker
+    environment:
+      SPRING_KAFKA_CONSUMER_BOOTSTRAP_SERVERS: broker:9092
+      SPRING_KAFKA_CONSUMER_GROUP_ID: "myGroup"
+      SPRING_KAFKA_CONSUMER_AUTO_OFFSET_RESET: earliest
+      SPRING_KAFKA_CONSUMER_KEY_DESERIALIZER: "org.apache.kafka.common.serialization.StringDeserializer"
+      SPRING_KAFKA_CONSUMER_VALUE_DESERIALIZER: "org.apache.kafka.common.serialization.StringDeserializer"
+      SPRING_KAFKA_PRODUCER_BOOTSTRAP_SERVERS: broker:9092
+      SPRING_KAFKA_PRODUCER_KEY_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
+      SPRING_KAFKA_PRODUCER_VALUE_SERIALIZER: "org.apache.kafka.common.serialization.StringSerializer"
+
+
+Sample DockerFile : 
+	# Use a base image with OpenJDK 17 (JRE)
+	FROM eclipse-temurin:17
+
+	# Set the working directory inside the container
+	WORKDIR /app
+
+	# Copy the compiled JAR file into the container at /app
+	COPY target/FirstApp-0.0.1-SNAPSHOT.jar /app/app.jar
+
+	# Copy the configuration file into the container at /app
+	COPY secrets /app/secrets
+
+	# Expose the port your application will run on
+	EXPOSE 8080
+
+	# Command to run your application
+	CMD ["java", "-jar", "/app/app.jar"]
+
+/*** Testing producer and consuming of broker ***/
+
+GO inside the broker pod and execute :
+1 . bin/kafka-console-producer --topic javaguides --bootstrap-server localhost:9092
+2. write any message to the topic
+3. exit
+4. bin/kafka-console-consumer --topic javaguides --bootstrap-server localhost:9092 --from-beginning

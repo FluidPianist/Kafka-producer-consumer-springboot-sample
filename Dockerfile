@@ -8,7 +8,7 @@ WORKDIR /app
 COPY target/FirstApp-0.0.1-SNAPSHOT.jar /app/app.jar
 
 # Copy the configuration file into the container at /app
-COPY secrets /app/secrets
+#COPY secrets /app/secrets
 
 # Expose the port your application will run on
 EXPOSE 8080
